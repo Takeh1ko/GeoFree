@@ -1,107 +1,113 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 
-:: --- Настройки ---
 set "DEFAULT_IP=94.131.119.22"
-set "HOSTS_TMP=%TEMP%\hosts_list_%RANDOM%.txt"
-set "PS1=%TEMP%\add_hosts_%RANDOM%.ps1"
+set "HOSTS_FILE=%SystemRoot%\System32\drivers\etc\hosts"
 
-:: Список хостов 
-> "%HOSTS_TMP%" (
-  echo chatgpt.com
-  echo ab.chatgpt.com
-  echo auth.openai.com
-  echo auth0.openai.com
-  echo platform.openai.com
-  echo cdn.oaistatic.com
-  echo files.oaiusercontent.com
-  echo cdn.auth0.com
-  echo tcr9i.chat.openai.com
-  echo webrtc.chatgpt.com
-  echo gemini.google.com
-  echo aistudio.google.com
-  echo generativelanguage.googleapis.com
-  echo alkalimakersuite-pa.clients6.google.com
-  echo copilot.microsoft.com
-  echo sydney.bing.com
-  echo edgeservices.bing.com
-  echo claude.ai
-  echo aitestkitchen.withgoogle.com
-  echo aisandbox-pa.googleapis.com
-  echo x.ai
-  echo grok.com
-  echo accounts.x.ai
-  echo labs.google
-  echo anthropic.com
-  echo api.anthropic.com
-  echo api.openai.com
-  echo netflix.com
-  echo spotify.com
-)
-
-:: --- Проверка прав ---
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-  echo Требуются права администратора. Перезапуск с повышением...
-  powershell -Command "Start-Process -FilePath '%~f0' -Verb RunAs -ArgumentList '%*'"
-  del /f /q "%HOSTS_TMP%" >nul 2>&1
-  exit /b
+    powershell -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+    exit /b
 )
 
-:: --- Получаем IP ---
 if "%~1" neq "" (
-  set "IP=%~1"
+    set "IP=%~1"
 ) else (
-  set /p "input_ip=Будет использован стандартный IP: %DEFAULT_IP%  Нажмите Enter для подтверждения или введите свой IP и нажмите Enter: "
-  if defined input_ip ( set "IP=%input_ip%" ) else ( set "IP=%DEFAULT_IP%" )
+    echo.
+    echo Default IP: %DEFAULT_IP%
+    set /p "IP=Press Enter for default IP or type your IP: "
+    if "!IP!" == "" set "IP=%DEFAULT_IP%"
 )
 
-:: --- Создаём временный PowerShell-скрипт ---
-(
-  echo Param([string]$IP,[string]$HostsFile)
-  echo $hostsPath = Join-Path $env:WinDir "System32\drivers\etc\hosts"
-  echo if (-not (Test-Path $hostsPath)) { Write-Host "hosts not found: $hostsPath"; exit 1 }
-  echo
-  echo # === Создание резервной копии (backup) - начинаем здесь ===
-  echo $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-  echo $backup = "$hostsPath.backup.$stamp"
-  echo Copy-Item -Path $hostsPath -Destination $backup -Force
-  echo Write-Host "Резервная копия: $backup"
-  echo # === Создание резервной копии (backup) - конец блока ===
-  echo
-  echo # Validate IPv4
-  echo $octets = $IP -split '\.'
-  echo if ($octets.Length -ne 4 -or ($octets | Where-Object { -not ($_ -match ''^\d+$'') -or [int]$_ -lt 0 -or [int]$_ -gt 255 })) { Write-Host "Неверный IP: $IP"; exit 1 }
-  echo
-  echo $lines = Get-Content -Path $hostsPath -ErrorAction Stop
-  echo $hosts = Get-Content -Path $HostsFile -ErrorAction Stop
-  echo $newEntries = @()
-  echo foreach ($host in $hosts) {
-  echo   $h = $host.Trim()
-  echo   if ($h -eq '') { continue }
-  echo   $patternIPLine = '^\s*' + [regex]::Escape($IP) + '\s+.*\b' + [regex]::Escape($h) + '\b'
-  echo   if ($lines -match $patternIPLine) { Write-Host "Пропускаю $h — уже присутствует с IP $IP"; continue }
-  echo   $lines = $lines | Where-Object { $_ -match '^\s*#' -or ($_ -notmatch ('\b' + [regex]::Escape($h) + '\b')) }
-  echo   $newEntries += ($IP + "`t" + $h)
-  echo   Write-Host "Запланирована новая запись: $IP $h"
-  echo }
-  echo if ($newEntries.Count -gt 0) {
-  echo   $lines += ''
-  echo   $lines += $newEntries
-  echo   $lines | Set-Content -Path $hostsPath -Encoding ASCII
-  echo   Write-Host "Добавлены новые записи в $hostsPath"
-  echo } else {
-  echo   Write-Host "Новых записей не требуется."
-  echo }
-) > "%PS1%"
+echo.
+echo Using IP: !IP!
+echo.
 
-:: --- Запуск PowerShell-скрипта ---
-powershell -NoProfile -ExecutionPolicy Bypass -File "%PS1%" "%IP%" "%HOSTS_TMP%"
-set "RC=%ERRORLEVEL%"
+if not exist "%HOSTS_FILE%" (
+    echo ERROR: hosts file not found
+    pause
+    exit /b 1
+)
 
-:: --- Чистка временных файлов ---
-del /f /q "%PS1%" >nul 2>&1
-del /f /q "%HOSTS_TMP%" >nul 2>&1
+set "TIMESTAMP=%date:~-4%%date:~3,2%%date:~0,2%_%time:~0,2%%time:~3,2%%time:~6,2%"
+set "TIMESTAMP=!TIMESTAMP: =0!"
+set "BACKUP_FILE=%HOSTS_FILE%.backup.!TIMESTAMP!"
 
-endlocal
-exit /b %RC%
+copy "%HOSTS_FILE%" "%BACKUP_FILE%" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [OK] Backup created: %BACKUP_FILE%
+) else (
+    echo [ERROR] Failed to create backup
+    pause
+    exit /b 1
+)
+
+echo.
+echo Checking and adding entries to hosts file...
+echo.
+
+set "TEMP_NEW=%TEMP%\hosts_new_%RANDOM%.txt"
+set "ADDED=0"
+set "SKIPPED=0"
+
+set "HOSTS_LIST=chatgpt.com ab.chatgpt.com auth.openai.com auth0.openai.com platform.openai.com cdn.oaistatic.com files.oaiusercontent.com cdn.auth0.com tcr9i.chat.openai.com webrtc.chatgpt.com gemini.google.com aistudio.google.com generativelanguage.googleapis.com alkalimakersuite-pa.clients6.google.com copilot.microsoft.com sydney.bing.com edgeservices.bing.com claude.ai aitestkitchen.withgoogle.com aisandbox-pa.googleapis.com x.ai grok.com accounts.x.ai labs.google anthropic.com api.anthropic.com api.openai.com netflix.com spotify.com"
+
+> "%TEMP_NEW%" echo.
+
+for %%H in (%HOSTS_LIST%) do (
+    findstr /C:"%%H" "%HOSTS_FILE%" >nul 2>&1
+    if !errorlevel! equ 0 (
+        echo [SKIP] %%H - already exists
+        set /a SKIPPED+=1
+    ) else (
+        echo [ADD] %%H
+        >> "%TEMP_NEW%" echo !IP!	%%H
+        set /a ADDED+=1
+    )
+)
+
+if !ADDED! gtr 0 (
+    type "%HOSTS_FILE%" > "%HOSTS_FILE%.tmp"
+    echo. >> "%HOSTS_FILE%.tmp"
+    echo # Added by hosts manager >> "%HOSTS_FILE%.tmp"
+    type "%TEMP_NEW%" >> "%HOSTS_FILE%.tmp"
+    
+    move /y "%HOSTS_FILE%.tmp" "%HOSTS_FILE%" >nul 2>&1
+    if %errorlevel% equ 0 (
+        echo.
+        echo [OK] Added !ADDED! new entries
+    ) else (
+        echo [ERROR] Failed to write to hosts file
+        del "%TEMP_NEW%" >nul 2>&1
+        pause
+        exit /b 1
+    )
+) else (
+    echo.
+    echo [INFO] No new entries needed, all hosts already exist
+)
+
+if !SKIPPED! gtr 0 (
+    echo [INFO] Skipped !SKIPPED! existing entries
+)
+
+del "%TEMP_NEW%" >nul 2>&1
+
+echo.
+echo Flushing DNS cache...
+ipconfig /flushdns >nul 2>&1
+echo [OK] DNS cache flushed
+echo.
+
+echo ====================================
+echo Operation completed successfully!
+echo ====================================
+echo.
+echo IP used: !IP!
+echo Backup: %BACKUP_FILE%
+echo.
+echo IMPORTANT: Please restart your browsers and apps!
+echo.
+
+pause
+exit /b 0
