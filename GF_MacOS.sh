@@ -80,6 +80,18 @@ fi
 tmp_new=$(mktemp)
 trap 'rm -f "$tmp_new"' EXIT
 
+# === Блок создания резервной копии (backup) ===
+if [ ! -f "$hosts_file" ]; then
+  echo "Файл hosts не найден: $hosts_file"
+  exit 1
+fi
+stamp=$(date +"%Y%m%d_%H%M%S")
+backup_file="${hosts_file}.backup.${stamp}"
+cp -p "$hosts_file" "$backup_file"
+echo "Резервная копия: $backup_file"
+# === Конец блока резервной копии ===
+
+
 # основной цикл — для каждого хоста
 for host in "${HOSTS[@]}"; do
   # если уже есть строка с тем же IP и этим хостом — пропустить

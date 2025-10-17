@@ -6,7 +6,7 @@ set "DEFAULT_IP=94.131.119.22"
 set "HOSTS_TMP=%TEMP%\hosts_list_%RANDOM%.txt"
 set "PS1=%TEMP%\add_hosts_%RANDOM%.ps1"
 
-:: Список хостов (по одному на строку) — удобно править тут
+:: Список хостов 
 > "%HOSTS_TMP%" (
   echo chatgpt.com
   echo ab.chatgpt.com
@@ -39,7 +39,7 @@ set "PS1=%TEMP%\add_hosts_%RANDOM%.ps1"
   echo spotify.com
 )
 
-:: --- Проверка прав (elevation) ---
+:: --- Проверка прав ---
 net session >nul 2>&1
 if %errorlevel% neq 0 (
   echo Требуются права администратора. Перезапуск с повышением...
@@ -61,6 +61,13 @@ if "%~1" neq "" (
   echo Param([string]$IP,[string]$HostsFile)
   echo $hostsPath = Join-Path $env:WinDir "System32\drivers\etc\hosts"
   echo if (-not (Test-Path $hostsPath)) { Write-Host "hosts not found: $hostsPath"; exit 1 }
+  echo
+  echo # === Создание резервной копии (backup) - начинаем здесь ===
+  echo $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+  echo $backup = "$hostsPath.backup.$stamp"
+  echo Copy-Item -Path $hostsPath -Destination $backup -Force
+  echo Write-Host "Резервная копия: $backup"
+  echo # === Создание резервной копии (backup) - конец блока ===
   echo
   echo # Validate IPv4
   echo $octets = $IP -split '\.'
