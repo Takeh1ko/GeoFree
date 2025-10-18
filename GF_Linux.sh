@@ -1,133 +1,113 @@
-#!/bin/bash
-# add_hosts.sh — добавляет/заменяет записи в /etc/hosts без дублирования
-# Использование:
-# sudo ./add_hosts.sh # использовать DEFAULT_IP (подтверждение через Enter)
-# sudo ./add_hosts.sh 1.2.3.4 # использовать IP из аргумента (без подтверждения)
-set -euo pipefail
+@echo off
+chcp 65001 >nul
+setlocal enabledelayedexpansion
 
-hosts_file="/etc/hosts"
-DEFAULT_IP="94.131.119.22"
-HOSTS=(
-    chatgpt.com ab.chatgpt.com auth.openai.com auth0.openai.com platform.openai.com
-    cdn.oaistatic.com files.oaiusercontent.com cdn.auth0.com tcr9i.chat.openai.com
-    webrtc.chatgpt.com gemini.google.com aistudio.google.com generativelanguage.googleapis.com
-    alkalimakersuite-pa.clients6.google.com copilot.microsoft.com sydney.bing.com
-    edgeservices.bing.com claude.ai aitestkitchen.withgoogle.com aisandbox-pa.googleapis.com
-    x.ai grok.com accounts.x.ai labs.google anthropic.com api.anthropic.com api.openai.com
+:: add_hosts.bat — добавляет/заменяет записи в hosts без дублирования
+:: Использование:
+:: add_hosts.bat                    (использовать DEFAULT_IP с подтверждением)
+:: add_hosts.bat 1.2.3.4            (использовать IP из аргумента)
+
+set "hosts_file=%SystemRoot%\System32\drivers\etc\hosts"
+set "DEFAULT_IP=94.131.119.22"
+
+:: Список хостов
+set HOSTS=chatgpt.com ab.chatgpt.com auth.openai.com auth0.openai.com platform.openai.com cdn.oaistatic.com files.oaiusercontent.com cdn.auth0.com tcr9i.chat.openai.com webrtc.chatgpt.com gemini.google.com aistudio.google.com generativelanguage.googleapis.com alkalimakersuite-pa.clients6.google.com copilot.microsoft.com sydney.bing.com edgeservices.bing.com claude.ai aitestkitchen.withgoogle.com aisandbox-pa.googleapis.com x.ai grok.com accounts.x.ai labs.google anthropic.com api.anthropic.com api.openai.com
+
+:: Проверка прав администратора
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Требуются права администратора. Запустите от имени администратора.
+    pause
+    exit /b 1
 )
 
-# Цвета
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+:: Получение IP
+if not "%~1"=="" (
+    set "IP=%~1"
+) else (
+    echo Стандартный IP: %DEFAULT_IP%
+    set /p "input_ip=Enter — подтвердить, или введите свой IP: "
+    if "!input_ip!"=="" (
+        set "IP=%DEFAULT_IP%"
+    ) else (
+        set "IP=!input_ip!"
+    )
+)
 
-ok() { echo -e "${GREEN}[OK]${NC} $1"; }
-skip() { echo -e "${YELLOW}[SKIP]${NC} $1"; }
-error() { echo -e "${RED}[ERROR]${NC} $1"; }
-info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+echo [INFO] Используется IP: %IP%
 
-# Проверка прав
-if [ "$EUID" -ne 0 ]; then
-    error "Требуются права root. Используйте sudo."
-    exit 1
-fi
+:: Создание резервной копии
+for /f "tokens=1-6 delims=/: " %%a in ("%date% %time%") do (
+    set "stamp=%%c%%b%%a_%%d%%e%%f"
+)
+set "stamp=!stamp: =0!"
+set "backup_file=%hosts_file%.backup.!stamp!"
 
-# Валидация IPv4
-is_valid_ip() {
-    local ip=$1
-    if [[ $ip =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
-        IFS='.' read -r a b c d <<< "$ip"
-        for oct in $a $b $c $d; do
-            (( oct < 0 || oct > 255 )) && return 1
-        done
-        return 0
-    fi
-    return 1
-}
+copy "%hosts_file%" "!backup_file!" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [OK] Резервная копия: !backup_file!
+) else (
+    echo [ERROR] Не удалось создать резервную копию
+    pause
+    exit /b 1
+)
 
-# Получение IP
-if [ "${1:-}" != "" ]; then
-    IP="$1"
-else
-    echo -n "Стандартный IP: $DEFAULT_IP. Enter — подтвердить, или введите свой: "
-    read -r input_ip
-    IP="${input_ip:-$DEFAULT_IP}"
-fi
+:: Создание временных файлов
+set "temp_hosts=%TEMP%\hosts_temp_%RANDOM%.txt"
+set "new_entries=%TEMP%\hosts_new_%RANDOM%.txt"
+type nul > "%new_entries%"
 
-if ! is_valid_ip "$IP"; then
-    error "Неверный IP: $IP"
-    exit 1
-fi
+:: Обработка каждого хоста
+set "changes=0"
+for %%h in (%HOSTS%) do (
+    set "host=%%h"
+    set "exists=0"
+    
+    :: Проверка, есть ли уже запись с нужным IP и хостом
+    for /f "tokens=1,2" %%a in ('findstr /i "%%h" "%hosts_file%" 2^>nul') do (
+        if "%%a"=="%IP%" if "%%b"=="%%h" (
+            set "exists=1"
+        )
+    )
+    
+    if !exists! equ 1 (
+        echo [SKIP] %%h ^(уже есть с %IP%^)
+    ) else (
+        :: Удаляем старые записи этого хоста
+        findstr /v /i "%%h" "%hosts_file%" > "%temp_hosts%" 2>nul
+        if exist "%temp_hosts%" (
+            copy /y "%temp_hosts%" "%hosts_file%" >nul 2>&1
+        )
+        
+        :: Добавляем в список новых записей
+        echo %IP%	%%h>> "%new_entries%"
+        echo [OK] Добавлен: %%h
+        set /a "changes+=1"
+    )
+)
 
-info "Используется IP: $IP"
+:: Применение изменений
+if %changes% gtr 0 (
+    echo.>> "%hosts_file%"
+    type "%new_entries%" >> "%hosts_file%"
+    echo [OK] Записи добавлены в hosts
+) else (
+    echo [INFO] Новых записей не требуется
+)
 
-# Резервная копия
-stamp=$(date +"%Y%m%d_%H%M%S")
-if cp "$hosts_file" "${hosts_file}.backup.${stamp}" 2>/dev/null; then
-    ok "Резервная копия: ${hosts_file}.backup.${stamp}"
-else
-    error "Не удалось создать резервную копию"
-    exit 1
-fi
+:: Очистка DNS кеша
+echo [INFO] Очистка DNS кеша...
+ipconfig /flushdns >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [OK] DNS кеш очищен
+) else (
+    echo [SKIP] Не удалось очистить DNS кеш
+)
 
-# Обработка хостов
-tmp_new=$(mktemp)
-trap 'rm -f "$tmp_new"' EXIT
+:: Очистка временных файлов
+if exist "%temp_hosts%" del /f /q "%temp_hosts%" >nul 2>&1
+if exist "%new_entries%" del /f /q "%new_entries%" >nul 2>&1
 
-for host in "${HOSTS[@]}"; do
-    if grep -E -q "^[[:space:]]*${IP}[[:space:]]+.*\b${host}\b" "$hosts_file"; then
-        skip "$host (уже есть с $IP)"
-        continue
-    fi
-    awk -v h="$host" '{
-        if ($0 ~ /^[[:space:]]*#/) { print; next }
-        if ($0 ~ ("\\<" h "\\>")) { next }
-        print
-    }' "$hosts_file" > "${hosts_file}.tmp.$$" && mv "${hosts_file}.tmp.$$" "$hosts_file"
-    echo -e "${IP}\t${host}" >> "$tmp_new"
-    ok "Добавлен: $host"
-done
-
-# Применение изменений
-if [ -s "$tmp_new" ]; then
-    echo "" >> "$hosts_file"
-    cat "$tmp_new" >> "$hosts_file"
-    ok "Записи добавлены в $hosts_file"
-else
-    info "Новых записей не требуется"
-fi
-
-# Очистка DNS кеша
-info "Очистка DNS кеша..."
-dns_cleared=false
-
-# systemd-resolved
-if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
-    if resolvectl flush-caches 2>/dev/null || systemd-resolve --flush-caches 2>/dev/null; then
-        ok "systemd-resolved: кеш очищен"
-        dns_cleared=true
-    fi
-fi
-
-# nscd
-if command -v nscd &>/dev/null && systemctl is-active --quiet nscd 2>/dev/null; then
-    if nscd -i hosts 2>/dev/null; then
-        ok "nscd: кеш очищен"
-        dns_cleared=true
-    fi
-fi
-
-# dnsmasq
-if command -v dnsmasq &>/dev/null && (systemctl is-active --quiet dnsmasq 2>/dev/null || pgrep -x dnsmasq &>/dev/null); then
-    if killall -HUP dnsmasq 2>/dev/null; then
-        ok "dnsmasq: кеш очищен"
-        dns_cleared=true
-    fi
-fi
-
-$dns_cleared || skip "DNS кеш не найден или не требует очистки"
-
-ok "Готово!"
-exit 0
+echo [OK] Готово!
+pause
+exit /b 0
