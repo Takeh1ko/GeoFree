@@ -6,7 +6,7 @@
 set -euo pipefail
 
 hosts_file="/etc/hosts"
-DEFAULT_IP="94.131.119.22"
+DEFAULT_IP="80.74.29.235"
 HOSTS=(
     chatgpt.com ab.chatgpt.com auth.openai.com auth0.openai.com platform.openai.com
     cdn.oaistatic.com files.oaiusercontent.com cdn.auth0.com tcr9i.chat.openai.com
