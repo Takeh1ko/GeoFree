@@ -21,7 +21,7 @@ if '%errorlevel%' NEQ '0' (
 
 :: --- 2. НАСТРОЙКИ ---
 set "hosts_file=%SystemRoot%\System32\drivers\etc\hosts"
-set "IP=94.131.119.22"
+set "IP=80.74.29.235"
 set "temp_file=%TEMP%\hosts_clean.tmp"
 
 :: Список доменов для очистки и добавления
