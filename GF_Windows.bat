@@ -33,8 +33,8 @@ echo       Backup saved.
 
 echo.
 echo [2/3] Updating entries with IP %IP%...
-set "PS_CMD=powershell -NoProfile -ExecutionPolicy Bypass -Command \"$hosts='%hosts_file%'; $ip='%IP%'; $doms='%DOMAINS%'.Split(' '); $txt=Get-Content $hosts; $out=@(); $found=@{}; foreach($l in $txt){ $replaced=$false; foreach($d in $doms){ if($l -match '^(?i)\s*[^#\s]+\s+.*\b'+[regex]::Escape($d)+'(?:\b|$)'){ if(!$replaced){ $l=$l -replace '^\s*[^#\s]+',$ip; $replaced=$true; }; $found[$d]=$true; } }; $out+=$l }; $add=$false; foreach($d in $doms){ if(!$found[$d]){ if(!$add){ $out+=''; $out+='# --- AI HOSTS FIX START ---'; $add=$true }; $out+=\"$ip $d\"; } }; if($add){ $out+='# --- AI HOSTS FIX END ---' }; $utf8NoBom = New-Object System.Text.UTF8Encoding $false; [IO.File]::WriteAllLines($hosts, $out, $utf8NoBom)\""
-%PS_CMD%
+attrib -r "%hosts_file%" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$hosts_path='%hosts_file%'; $ip='%IP%'; $doms='%DOMAINS%'.Split(' '); $txt=if(Test-Path $hosts_path){Get-Content $hosts_path}else{@()}; $out=@(); $found=@{}; foreach($l in $txt){ $replaced=$false; foreach($d in $doms){ if($l -match ('^(?i)\s*[^#\s]+\s+.*\b'+[regex]::Escape($d)+'(?:\b|$)')){ if(!$replaced){ $l=$l -replace '^\s*[^#\s]+',$ip; $replaced=$true }; $found[$d]=$true } }; $out+=$l }; $add=$false; foreach($d in $doms){ if(!$found[$d]){ if(!$add){ $out+=''; $out+='# --- AI HOSTS FIX START ---'; $add=$true }; $out+=($ip+' '+$d) } }; if($add){ $out+='# --- AI HOSTS FIX END ---' }; $utf8NoBom = New-Object System.Text.UTF8Encoding $false; [IO.File]::WriteAllLines($hosts_path, [string[]]$out, $utf8NoBom)"
 
 echo.
 echo [3/3] Flushing DNS cache...
