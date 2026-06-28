@@ -6,7 +6,7 @@
 set -euo pipefail
 
 hosts_file="/etc/hosts"
-DEFAULT_IP="80.74.29.235"
+DEFAULT_IP="85.137.95.246"
 HOSTS=(
     chatgpt.com ab.chatgpt.com auth.openai.com auth0.openai.com platform.openai.com
     cdn.oaistatic.com files.oaiusercontent.com cdn.auth0.com tcr9i.chat.openai.com
@@ -90,18 +90,34 @@ for host in "${HOSTS[@]}"; do
         continue
     fi
     
-    awk -v h="$host" '{
-        if ($0 ~ /^[[:space:]]*#/) { print; next }
-        found = 0
-        for (i = 1; i <= NF; i++) {
-            if ($i == h) { found = 1; break }
+    if awk -v h="$host" '
+        BEGIN { found=0 }
+        /^[[:space:]]*#/ { next }
+        {
+            for (i = 1; i <= NF; i++) {
+                if ($i == h) { found = 1; exit }
+            }
         }
-        if (found) { next }
-        print
-    }' "$hosts_file" > "${hosts_file}.tmp.$$" && mv "${hosts_file}.tmp.$$" "$hosts_file"
-    
-    echo -e "${IP}\t${host}" >> "$tmp_new"
-    ok "Добавлен: $host"
+        END { exit !found }
+    ' "$hosts_file"; then
+        awk -v h="$host" -v ip="$IP" '{
+            if ($0 ~ /^[[:space:]]*#/) { print; next }
+            found = 0
+            for (i = 1; i <= NF; i++) {
+                if ($i == h) { found = 1; break }
+            }
+            if (found) {
+                sub(/^[[:space:]]*[^[:space:]]+/, ip)
+                print
+                next
+            }
+            print
+        }' "$hosts_file" > "${hosts_file}.tmp.$$" && mv "${hosts_file}.tmp.$$" "$hosts_file"
+        ok "Обновлен: $host"
+    else
+        echo -e "${IP}\t${host}" >> "$tmp_new"
+        ok "Добавлен: $host"
+    fi
 done
 
 # Применение изменений
