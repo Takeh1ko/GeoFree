@@ -27,18 +27,57 @@ set "IP=85.137.95.246"
 set "DOMAINS=elevenlabs.io chatgpt.com ab.chatgpt.com auth.openai.com auth0.openai.com platform.openai.com cdn.oaistatic.com files.oaiusercontent.com cdn.auth0.com tcr9i.chat.openai.com webrtc.chatgpt.com gemini.google.com aistudio.google.com generativelanguage.googleapis.com alkalimakersuite-pa.clients6.google.com copilot.microsoft.com sydney.bing.com edgeservices.bing.com claude.ai aitestkitchen.withgoogle.com aisandbox-pa.googleapis.com x.ai grok.com accounts.x.ai labs.google anthropic.com api.anthropic.com api.openai.com"
 
 echo.
-echo [1/3] Creating backup...
+echo [1/4] Creating backup...
 copy /y "%hosts_file%" "%hosts_file%.bak.%RANDOM%" >nul
 echo       Backup saved.
 
 echo.
-echo [2/3] Updating entries with IP %IP%...
+echo [2/4] Preparing update script...
 attrib -r "%hosts_file%" >nul 2>&1
-set "PS_B64=JABoAG8AcwB0AHMAXwBwAGEAdABoACAAPQAgACQAZQBuAHYAOgBoAG8AcwB0AHMAXwBmAGkAbABlAAoAJABpAHAAIAA9ACAAJABlAG4AdgA6AEkAUAAKACQAZABvAG0AcwAgAD0AIAAkAGUAbgB2ADoARABPAE0AQQBJAE4AUwAuAFMAcABsAGkAdAAoACcAIAAnACkACgAkAHQAeAB0ACAAPQAgAGkAZgAgACgAVABlAHMAdAAtAFAAYQB0AGgAIAAkAGgAbwBzAHQAcwBfAHAAYQB0AGgAKQAgAHsAIABHAGUAdAAtAEMAbwBuAHQAZQBuAHQAIAAkAGgAbwBzAHQAcwBfAHAAYQB0AGgAIAB9ACAAZQBsAHMAZQAgAHsAIABAACgAKQAgAH0ACgAkAG8AdQB0ACAAPQAgAEAAKAApAAoAJABmAG8AdQBuAGQAIAA9ACAAQAB7AH0ACgBmAG8AcgBlAGEAYwBoACAAKAAkAGwAIABpAG4AIAAkAHQAeAB0ACkAIAB7AAoAIAAgACAAIAAkAHIAZQBwAGwAYQBjAGUAZAAgAD0AIAAkAGYAYQBsAHMAZQAKACAAIAAgACAAZgBvAHIAZQBhAGMAaAAgACgAJABkACAAaQBuACAAJABkAG8AbQBzACkAIAB7AAoAIAAgACAAIAAgACAAIAAgAGkAZgAgACgAJABsACAALQBtAGEAdABjAGgAIAAoACcAXgAoAD8AaQApAFwAcwAqAFsAXgAjAFwAcwBdACsAXABzACsALgAqAFwAYgAnACAAKwAgAFsAcgBlAGcAZQB4AF0AOgA6AEUAcwBjAGEAcABlACgAJABkACkAIAArACAAJwAoAD8AOgBcAGIAfAAkACkAJwApACkAIAB7AAoAIAAgACAAIAAgACAAIAAgACAAIAAgACAAaQBmACAAKAAtAG4AbwB0ACAAJAByAGUAcABsAGEAYwBlAGQAKQAgAHsACgAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACQAbAAgAD0AIAAkAGwAIAAtAHIAZQBwAGwAYQBjAGUAIAAnAF4AXABzACoAWwBeACMAXABzAF0AKwAnACwAIAAkAGkAcAAKACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAJAByAGUAcABsAGEAYwBlAGQAIAA9ACAAJAB0AHIAdQBlAAoAIAAgACAAIAAgACAAIAAgACAAIAAgACAAfQAKACAAIAAgACAAIAAgACAAIAAgACAAIAAgACQAZgBvAHUAbgBkAFsAJABkAF0AIAA9ACAAJAB0AHIAdQBlAAoAIAAgACAAIAAgACAAIAAgAH0ACgAgACAAIAAgAH0ACgAgACAAIAAgACQAbwB1AHQAIAArAD0AIAAkAGwACgB9AAoAJABhAGQAZAAgAD0AIAAkAGYAYQBsAHMAZQAKAGYAbwByAGUAYQBjAGgAIAAoACQAZAAgAGkAbgAgACQAZABvAG0AcwApACAAewAKACAAIAAgACAAaQBmACAAKAAtAG4AbwB0ACAAJABmAG8AdQBuAGQAWwAkAGQAXQApACAAewAKACAAIAAgACAAIAAgACAAIABpAGYAIAAoAC0AbgBvAHQAIAAkAGEAZABkACkAIAB7AAoAIAAgACAAIAAgACAAIAAgACAAIAAgACAAJABvAHUAdAAgACsAPQAgACcAJwAKACAAIAAgACAAIAAgACAAIAAgACAAIAAgACQAbwB1AHQAIAArAD0AIAAnACMAIAAtAC0ALQAgAEEASQAgAEgATwBTAFQAUwAgAEYASQBYACAAUwBUAEEAUgBUACAALQAtAC0AJwAKACAAIAAgACAAIAAgACAAIAAgACAAIAAgACQAYQBkAGQAIAA9ACAAJAB0AHIAdQBlAAoAIAAgACAAIAAgACAAIAAgAH0ACgAgACAAIAAgACAAIAAgACAAJABvAHUAdAAgACsAPQAgACIAJABpAHAAIAAkAGQAIgAKACAAIAAgACAAfQAKAH0ACgBpAGYAIAAoACQAYQBkAGQAKQAgAHsACgAgACAAIAAgACQAbwB1AHQAIAArAD0AIAAnACMAIAAtAC0ALQAgAEEASQAgAEgATwBTAFQAUwAgAEYASQBYACAARQBOAEQAIAAtAC0ALQAnAAoAfQAKACQAdQB0AGYAOABOAG8AQgBvAG0AIAA9ACAATgBlAHcALQBPAGIAagBlAGMAdAAgAFMAeQBzAHQAZQBtAC4AVABlAHgAdAAuAFUAVABGADgARQBuAGMAbwBkAGkAbgBnACAAJABmAGEAbABzAGUACgBbAEkATwAuAEYAaQBsAGUAXQA6ADoAVwByAGkAdABlAEEAbABsAEwAaQBuAGUAcwAoACQAaABvAHMAdABzAF8AcABhAHQAaAAsACAAWwBzAHQAcgBpAG4AZwBbAF0AXQAkAG8AdQB0ACwAIAAkAHUAdABmADgATgBvAEIAbwBtACkACgA="
-powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand %PS_B64%
+set "ps_script=%TEMP%\gf_update_hosts.ps1"
+
+> "%ps_script%" echo param^([string]$HostsPath, [string]$IP, [string]$DomainList^)
+>> "%ps_script%" echo $doms = $DomainList.Split^(' '^)
+>> "%ps_script%" echo $txt = @^(^)
+>> "%ps_script%" echo if ^(Test-Path $HostsPath^) { $txt = Get-Content $HostsPath }
+>> "%ps_script%" echo $out = @^(^)
+>> "%ps_script%" echo $found = @{}
+>> "%ps_script%" echo foreach ^($line in $txt^) {
+>> "%ps_script%" echo     $replaced = $false
+>> "%ps_script%" echo     foreach ^($d in $doms^) {
+>> "%ps_script%" echo         $pattern = '^\s*[^#\s]+\s+' + [regex]::Escape^($d^) + '\s*$'
+>> "%ps_script%" echo         if ^($line -match $pattern^) {
+>> "%ps_script%" echo             if ^(-not $replaced^) {
+>> "%ps_script%" echo                 $line = $line -replace '^\s*[^\s]+', $IP
+>> "%ps_script%" echo                 $replaced = $true
+>> "%ps_script%" echo             }
+>> "%ps_script%" echo             $found[$d] = $true
+>> "%ps_script%" echo         }
+>> "%ps_script%" echo     }
+>> "%ps_script%" echo     $out += $line
+>> "%ps_script%" echo }
+>> "%ps_script%" echo $newEntries = @^(^)
+>> "%ps_script%" echo foreach ^($d in $doms^) {
+>> "%ps_script%" echo     if ^(-not $found[$d]^) {
+>> "%ps_script%" echo         $newEntries += "$IP $d"
+>> "%ps_script%" echo     }
+>> "%ps_script%" echo }
+>> "%ps_script%" echo if ^($newEntries.Count -gt 0^) {
+>> "%ps_script%" echo     $out += ''
+>> "%ps_script%" echo     $out += '# --- AI HOSTS FIX START ---'
+>> "%ps_script%" echo     $out += $newEntries
+>> "%ps_script%" echo     $out += '# --- AI HOSTS FIX END ---'
+>> "%ps_script%" echo }
+>> "%ps_script%" echo $enc = New-Object System.Text.UTF8Encoding $false
+>> "%ps_script%" echo [IO.File]::WriteAllLines^($HostsPath, [string[]]$out, $enc^)
 
 echo.
-echo [3/3] Flushing DNS cache...
+echo [3/4] Updating entries with IP %IP%...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%ps_script%" -HostsPath "%hosts_file%" -IP "%IP%" -DomainList "%DOMAINS%"
+del "%ps_script%" >nul 2>&1
+
+echo.
+echo [4/4] Flushing DNS cache...
 ipconfig /flushdns >nul
 
 echo.
